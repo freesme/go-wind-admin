@@ -178,6 +178,13 @@ function Install-DockerDesktop {
     #>
     Log "Installing Docker Desktop..."
 
+    # 检查 Docker 是否已安装
+    if (Get-Command docker -ErrorAction SilentlyContinue) {
+        $dockerVersion = & docker --version 2>&1
+        Log "  [SKIP] Docker already installed: $dockerVersion"
+        return $true
+    }
+
     if (Get-Command winget -ErrorAction SilentlyContinue) {
         Log "  Using Winget to install Docker Desktop"
         try {
