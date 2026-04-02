@@ -99,6 +99,14 @@ pnpm run test      # Tests (Jest)
 - OpenAPI docs: `http://localhost:7788/docs/openapi.yaml`
 - Default credentials: `admin` / `admin`
 
+## Key Dependencies & Framework Capabilities
+
+The backend heavily relies on `kratos-bootstrap` (`github.com/tx7do/kratos-bootstrap`). Before adding any server-level feature, check whether the framework already provides it:
+
+- **`kratos-bootstrap/rpc`**: REST/gRPC server creation, pprof, CORS, TLS, middleware (recovery, tracing, validate, rate-limit, metadata)
+- **`kratos-bootstrap/api`**: Configuration proto definitions (`conf/v1/`), check `Server_REST` fields for existing feature toggles (e.g. `enable_swagger`, `enable_pprof`)
+- **Config files** (`configs/*.yaml`): If a config field already exists, the feature is likely already wired up in the framework — read the framework source before writing new code.
+
 ## Dependencies (Docker Compose)
 
 PostgreSQL, Redis, MinIO (object storage). Start with `make docker-libs` from `backend/`.

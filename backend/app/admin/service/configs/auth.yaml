@@ -1,36 +1,81 @@
+# ==================== 认证配置 (Authentication) ====================
+# 负责验证"你是谁"，即身份认证
+# 对应 kratos-authn 库，proto 定义: kratos_conf_authn.proto
 authn:
-  type: "jwt" # jwt, oidc, preshared_key
+  # 认证方式: jwt | oidc | preshared_key
+  #   - jwt:           JSON Web Token，适用于大多数 API 认证场景（当前使用）
+  #   - oidc:          OpenID Connect，适用于对接第三方身份提供商（如 Google、Azure AD）
+  #   - preshared_key: 预共享密钥，适用于服务间内部调用
+  type: "jwt"
 
+  # JWT 配置（当 type 为 "jwt" 时生效）
   jwt:
-    method: "HS256" # HS256, HS384, HS512, RS256, RS384, RS512, ES256, ES384, ES512, Ed25519
+    # 签名算法:
+    #   对称加密: HS256, HS384, HS512（密钥双方共享，适合单体/内部服务）
+    #   RSA:      RS256, RS384, RS512（非对称，公钥验签，适合分布式微服务）
+    #   ECDSA:    ES256, ES384, ES512（非对称，更短的密钥长度）
+    #   EdDSA:    Ed25519（高性能非对称签名）
+    method: "HS256"
+    # 签名密钥
+    #   - 对称算法 (HS*): 此值为共享密钥字符串
+    #   - 非对称算法 (RS*/ES*/Ed25519): 此值为私钥文件路径或 PEM 内容
+    # ⚠️ 生产环境务必更换为强密钥，并通过环境变量或密钥管理服务注入
     key: "some_api_key"
 
+  # OIDC 配置（当 type 为 "oidc" 时生效）
   oidc:
+    # 身份提供商的 Issuer URL（如 https://accounts.google.com）
     issuer_url: "https://example.com"
+    # 受众标识，必须与 ID Token 中的 aud 字段匹配
     audience: "your_audience"
+    # 验签算法
     method: "HS256"
 
+  # 预共享密钥配置（当 type 为 "preshared_key" 时生效）
+  # 适用于服务间内部调用，请求头中携带预共享密钥即可通过认证
   preshared_key:
     valid_keys:
       - "key1"
       - "key2"
 
+# ==================== 授权配置 (Authorization) ====================
+# 负责验证"你能做什么"，即权限控制
+# 对应 kratos-authz 库，proto 定义: kratos_conf_authz.proto
 authz:
-  type: "opa" # casbin, opa, zanzibar, noop
+  # 授权引擎: casbin | opa | zanzibar | noop
+  #   - casbin:   基于 RBAC/ABAC 模型的策略引擎，通过模型文件定义权限规则
+  #   - opa:      Open Policy Agent，通过 Rego 语言定义细粒度策略（当前使用）
+  #   - zanzibar: Google Zanzibar 风格的关系型授权（ReBAC），适合复杂的资源层级关系
+  #   - noop:     空实现，不做任何授权检查（仅用于开发调试）
+  type: "opa"
 
+  # Casbin 配置（当 type 为 "casbin" 时生效）
+  # 需要提供模型文件（定义 RBAC/ABAC 规则结构）和策略（定义具体权限）
   casbin:
+    # model_path: "./configs/casbin_model.conf"   # 模型文件路径
+    # policy_path: "./configs/casbin_policy.csv"  # 策略文件路径
 
+  # OPA 配置（当 type 为 "opa" 时生效）
+  # 通过 Rego 策略语言定义权限规则，策略和角色可动态加载
+  # 本项目中 OPA 的策略和角色由代码层（authorizer 包）动态注入，此处无需额外配置
   opa:
 
+  # Zanzibar 配置（当 type 为 "zanzibar" 时生效）
+  # Google Zanzibar 是关系型授权模型（ReBAC），通过"谁对什么资源有什么关系"来判断权限
   zanzibar:
-    type: "keto" # keto, open_fga
+    # 实现后端: keto | open_fga
+    #   - keto:     Ory Keto，Zanzibar 的开源实现
+    #   - open_fga: OpenFGA，Auth0 开源的 Zanzibar 实现
+    type: "keto"
 
+    # Ory Keto 配置
     keto:
-      write_url: "http://keto:4466"
-      read_url: "http://keto:4466"
-      use_grpc: true
+      write_url: "http://keto:4466"  # 写入关系的端点
+      read_url: "http://keto:4466"   # 查询权限的端点
+      use_grpc: true                  # 是否使用 gRPC 协议（比 HTTP 性能更好）
 
+    # OpenFGA 配置
     open_fga:
-      api_url: "http://openfga:8080"
-      store_id: "your_store_id"
-      token: "your_token"
+      api_url: "http://openfga:8080"  # OpenFGA API 地址
+      store_id: "your_store_id"       # 授权模型的存储 ID
+      token: "your_token"             # API 访问令牌
